@@ -26,7 +26,33 @@
         $btn = $('#ctlBtn'),
         state = 'pending'
 
-    var uploader = WebUploader.create({
+    // register方法必须在new Uploader()之前调用
+    WebUploader.Uploader.register({
+        'before-send': function (block) {
+            var deferred = WebUploader.Deferred();
+            var file = block.file;
+
+            uploader.md5File(block.blob, 0, 1024)
+                .fail(function () {
+                    console.error("文件 " + file.name + "读取失败");
+                    deferred.reject();
+                })
+                .then(function (md5) {
+                    // 如果验证已经上传过
+                    if (file.existChunks && file.existChunks.indexOf(md5) >= 0) {
+                        deferred.reject();
+                        console.log("[SKIP] " + file.name + " " + block.chunk + "/" + block.chunks + " " + md5);
+                    }
+                    else {
+                        console.log("上传 " + file.name + " " + block.chunk + "/" + block.chunks + " " + md5);
+                        deferred.resolve();
+                    }
+                });
+            return deferred;
+        }
+    });
+
+    var uploader = new WebUploader.Uploader({
 
         // swf文件路径
         swf: '/lib/webuploader-0.1.5/Uploader.swf',
@@ -37,14 +63,19 @@
         // 选择文件的按钮。可选。
         // 内部根据当前运行是创建，可能是input元素，也可能是flash.
         pick: '#picker',
-        threads: 3,
         chunked: true,
 
+        // 分块上传每个块的大小
         chunkSize: 10 * 1024 * 1024,
 
         // 不压缩image, 默认如果是jpeg，文件上传前会压缩一把再上传！
         compress: false,
-        prepareNextFile: true
+        prepareNextFile: true,
+
+        // 上传的附加信息
+        // formData: {
+        //     category: "Books"
+        // }
     });
 
     // 当有文件被添加进队列的时候
@@ -112,6 +143,15 @@
         console.time("upload");
     });
 
+
+
+    uploader.onUploadBeforeSend = function (block, formData) {
+
+        // 每个块上传前添加附加数据
+        formData.time = Date.now();
+
+    };
+
     uploader.on('uploadSuccess', function (file) {
         var deferred = WebUploader.Deferred();
         $.ajax("/upload/complete", {
@@ -136,7 +176,6 @@
                 deferred.resolve();
             }
         })
-        console.timeEnd("upload");
     });
 
     uploader.on('uploadError', function (file) {
@@ -145,32 +184,9 @@
 
     uploader.on('uploadComplete', function (file) {
         $('#' + file.id).find('.progress').fadeOut();
+        console.timeEnd("upload");
     });
 
-    uploader.on('uploadBeforeSend', function (data) {
-        var deferred = WebUploader.Deferred();
-        var file = data.file;
-        //  console.log("上传 " + file.name + " " + data.chunk + "/" + data.chunks);
-
-        uploader.md5File(data.blob, 0, 1024)
-            .fail(function () {
-                console.error("文件 " + file.name + "读取失败");
-                deferred.reject();
-            })
-            .then(function (md5) {
-                // 如果验证已经上传过
-                if (file.existChunks && file.existChunks.indexOf(md5) >= 0) {
-                    deferred.reject();
-                    console.log("跳过 " + file.name + " " + data.chunk + "/" + data.chunks);
-                }
-                else {
-                    console.log("上传 " + file.name + " " + data.chunk + "/" + data.chunks);
-                    deferred.resolve();
-                }
-            });
-
-        return deferred.promise();
-    });
 
     $btn.on('click', function () {
         if (state === 'uploading') {

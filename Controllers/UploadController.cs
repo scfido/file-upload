@@ -42,7 +42,11 @@ namespace fileupload.Controllers
                     existChunks= new string[]{
                     "517a7af1baf71961c59df93748883f8c",
                     "8915cffa187536bea69e96087840e24b",
-                    "2b242305657669477b394dcbffdad864"
+                    "2b242305657669477b394dcbffdad864",
+                    "16a7b36a5d83079ed334be306219d5f1",
+                    "f617d7db019813e58a17b330f9245b76",
+                    "0398043b0a85cd4f61ddfb9c6d9e0a83",
+                    "9d2253c714337866393e7cdc0e9cdeca"
                 }
             });
         }
